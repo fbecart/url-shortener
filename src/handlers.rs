@@ -37,13 +37,29 @@ impl Handler for UrlShortenerHandler {
 
                 match long_url {
                     Ok(long_url) => {
-                        let random_key: String =
-                        rand::thread_rng().gen_ascii_chars().take(5).collect();
-                        let short_url = format!("http://localhost:3000/{}", random_key);
+                        match self.shortened_urls.write() {
+                            Ok(mut shortened_urls) => {
+                                let mut url_key: Option<String> = None;
+                                while url_key.is_none() {
+                                    let random_key: String =
+                                        rand::thread_rng().gen_ascii_chars().take(5).collect();
+                                    url_key = match shortened_urls.get(&random_key) {
+                                        Some(_) => None,
+                                        None => Some(random_key),
+                                    }
+                                }
+                                let url_key = url_key.unwrap();
 
-                        self.shortened_urls.write().unwrap().insert(random_key, long_url);
-
-                        Ok(Response::with((status::Created, Header(headers::Location(short_url)))))
+                                let short_url = format!("http://localhost:3000/{}", url_key);
+                                shortened_urls.insert(url_key, long_url);
+                                Ok(Response::with((status::Created,
+                                                   Header(headers::Location(short_url)))))
+                            }
+                            Err(_) => {
+                                println!("Error acquiring shortened_url lock");
+                                Ok(Response::with(status::InternalServerError))
+                            }
+                        }
                     }
                     Err(e) => Ok(Response::with((status::BadRequest, e))),
                 }
