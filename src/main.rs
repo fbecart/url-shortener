@@ -1,40 +1,64 @@
 extern crate iron;
+extern crate rand;
+extern crate urlencoded;
 
-use std::collections::HashMap;
-
+use iron::headers;
 use iron::prelude::*;
-use iron::modifiers::Redirect;
+use iron::method::Method;
+use iron::modifiers::{Redirect, Header};
 use iron::{Handler, Url, status};
 
+use rand::Rng;
+
+use std::collections::HashMap;
+use std::sync::RwLock;
+
+use urlencoded::UrlEncodedBody;
+
 struct UrlShortenerHandler {
-    shortened_urls: HashMap<String, Url>,
+    shortened_urls: RwLock<HashMap<String, Url>>,
 }
 
 impl UrlShortenerHandler {
     fn new() -> Self {
-        let mut static_routes = HashMap::new();
-
-        let google_url = "http://google.com";
-        static_routes.insert("google".to_string(), Url::parse(google_url).unwrap());
-
-        let rockets_url = "https://www.washingtonpost.com/graphics/business/rockets/";
-        static_routes.insert("rockets".to_string(), Url::parse(rockets_url).unwrap());
-
-        UrlShortenerHandler { shortened_urls: static_routes }
+        UrlShortenerHandler { shortened_urls: RwLock::new(HashMap::new()) }
     }
 }
 
 impl Handler for UrlShortenerHandler {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
-        let request_path = &req.url.path().join("/");
-        match self.shortened_urls.get(request_path) {
-            Some(url) => Ok(Response::with((status::Found, Redirect(url.clone())))),
-            None => Ok(Response::with(status::NotFound)),
+        match &req.method {
+            &Method::Post => {
+                let long_url = Url::parse(req.get_ref::<UrlEncodedBody>()
+                        .unwrap()
+                        .get("url")
+                        .unwrap()
+                        .get(0)
+                        .unwrap())
+                    .unwrap();
+
+                let random_key: String = rand::thread_rng().gen_ascii_chars().take(5).collect();
+                let short_url = format!("http://localhost:3000/{}", random_key);
+
+                self.shortened_urls.write().unwrap().insert(random_key, long_url);
+
+                Ok(Response::with((status::Created, Header(headers::Location(short_url)))))
+            }
+            &Method::Get | &Method::Head => {
+                let request_path = &req.url.path().join("/");
+                match self.shortened_urls.read().unwrap().get(request_path) {
+                    Some(url) => Ok(Response::with((status::Found, Redirect(url.clone())))),
+                    None => Ok(Response::with(status::NotFound)),
+                }
+            }
+            _ => Ok(Response::with(status::NotFound)),
         }
     }
 }
 
 fn main() {
+    println!("Starting URL Shortener on port 3000...");
+
     let handler = UrlShortenerHandler::new();
     Iron::new(handler).http("localhost:3000").unwrap();
 }

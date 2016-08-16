@@ -3,5 +3,11 @@ name = "url-shortener"
 version = "0.1.0"
 authors = ["Florent Bécart <florent.becart@gmail.com>"]
 
+[dependencies]
+rand = "0.3"
+
 [dependencies.iron]
+version = "*"
+
+[dependencies.urlencoded]
 version = "*"
