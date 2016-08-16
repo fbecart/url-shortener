@@ -29,20 +29,26 @@ impl Handler for UrlShortenerHandler {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
         match &req.method {
             &Method::Post => {
-                let long_url = Url::parse(req.get_ref::<UrlEncodedBody>()
-                        .unwrap()
-                        .get("url")
-                        .unwrap()
-                        .get(0)
-                        .unwrap())
-                    .unwrap();
+                let long_url = req.get_ref::<UrlEncodedBody>()
+                    .map_err(|_| "URL encoded body missing")
+                    .and_then(|data| match data.get("url") {
+                        Some(urls) => Ok(urls.first().unwrap()),
+                        None => Err("Parameter 'url' missing from the URL encoded body"),
+                    })
+                    .and_then(|url| Url::parse(url).map_err(|_| "Parameter 'url' is invalid"));
 
-                let random_key: String = rand::thread_rng().gen_ascii_chars().take(5).collect();
-                let short_url = format!("http://localhost:3000/{}", random_key);
+                match long_url {
+                    Ok(long_url) => {
+                        let random_key: String =
+                            rand::thread_rng().gen_ascii_chars().take(5).collect();
+                        let short_url = format!("http://localhost:3000/{}", random_key);
 
-                self.shortened_urls.write().unwrap().insert(random_key, long_url);
+                        self.shortened_urls.write().unwrap().insert(random_key, long_url);
 
-                Ok(Response::with((status::Created, Header(headers::Location(short_url)))))
+                        Ok(Response::with((status::Created, Header(headers::Location(short_url)))))
+                    }
+                    Err(e) => Ok(Response::with((status::BadRequest, e))),
+                }
             }
             &Method::Get | &Method::Head => {
                 let request_path = &req.url.path().join("/");
