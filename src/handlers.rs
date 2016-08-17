@@ -1,11 +1,10 @@
-extern crate rand;
-
 use iron::headers;
 use iron::prelude::*;
 use iron::method::Method;
 use iron::modifiers::{Redirect, Header};
 use iron::{Handler, Url, status};
 
+use rand;
 use rand::Rng;
 
 use std::collections::HashMap;
@@ -75,5 +74,56 @@ impl Handler for UrlShortenerHandler {
             &Method::Get | &Method::Head => self.handle_get_request(req),
             _ => Ok(Response::with(status::NotFound)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use hyper::header::Location;
+
+    use iron::headers::ContentType;
+    use iron::{Headers, status};
+
+    use iron_test::{request, response};
+
+    use super::UrlShortenerHandler;
+
+    #[test]
+    fn short_url_not_found() {
+        let response = request::get("http://localhost:3000/hello",
+                                    Headers::new(),
+                                    &UrlShortenerHandler::new())
+            .unwrap();
+        assert_eq!(response.status.unwrap(), status::NotFound);
+    }
+
+    #[test]
+    fn short_url_found() {
+        let handler = UrlShortenerHandler::new();
+
+        let mut request_headers = Headers::new();
+        request_headers.set(ContentType::form_url_encoded());
+        let response = request::post("http://localhost:3000",
+                                     request_headers,
+                                     "url=https://www.helloclue.com/",
+                                     &handler)
+            .unwrap();
+        let short_url = response.headers.get::<Location>().unwrap();
+        let response = request::get(short_url, Headers::new(), &handler).unwrap();
+        assert_eq!(response.status.unwrap(), status::Found);
+        assert_eq!(response.headers.get::<Location>().unwrap().0,
+                   "https://www.helloclue.com/");
+    }
+
+    #[test]
+    fn post_wrong_contenttype() {
+        let response = request::post("http://localhost:3000",
+                                     Headers::new(),
+                                     "",
+                                     &UrlShortenerHandler::new())
+            .unwrap();
+        assert_eq!(response.status.unwrap(), status::BadRequest);
+        assert_eq!(response::extract_body_to_string(response),
+                   "URL encoded body missing")
     }
 }

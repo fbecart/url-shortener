@@ -1,6 +1,10 @@
+extern crate hyper;
 extern crate iron;
 extern crate rand;
 extern crate urlencoded;
+
+#[cfg(test)]
+extern crate iron_test;
 
 mod handlers;
 

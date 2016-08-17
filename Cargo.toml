@@ -5,9 +5,13 @@ authors = ["Florent Bécart <florent.becart@gmail.com>"]
 
 [dependencies]
 rand = "0.3"
+hyper = "0.9.10"
 
 [dependencies.iron]
 version = "*"
 
 [dependencies.urlencoded]
 version = "*"
+
+[dev-dependencies]
+iron-test = { git = "https://github.com/reem/iron-test" }
