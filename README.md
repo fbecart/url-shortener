@@ -39,7 +39,7 @@ Then, the short URL can be queried very simply using a GET or HEAD HTTP request.
 
     curl -i http://localhost:3000/JqC6S
 
-It indicates a redirection to the longer URL.
+If the short URL exists, the response will be a redirection to the longer URL.
 
     HTTP/1.1 302 Found
     Location: https://www.helloclue.com/
@@ -62,6 +62,6 @@ I don't have so much experience with it yet, and I'm always looking for new oppo
 
 Overall that was a great coding experience. The language seems simple and intuitive, with very powerful features. The compiler is awesome, and usually, if it compiles, it will run the way you expected.
 
-Despite the Rust promises of being extremely efficient (at execution), I found some basic libraries are still missing for this specific problem. A high-level async Web framework would have been great, as well as an efficient concurrent HashMap.
+Despite the Rust promises of being extremely efficient (at execution), some basic libraries are still missing for this specific problem. A high-level async Web framework would have been great, as well as an efficient concurrent HashMap.
 
-Because I'm new to the language, I obviously struggled on very simple things. There are really cool features I definitly need to understand better, such as higher order functions.
+Because I'm new to the language, I obviously struggled on very simple things. There are really cool features I definitely need to understand better, such as higher order functions.
