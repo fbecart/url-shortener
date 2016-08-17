@@ -13,12 +13,16 @@ use std::sync::RwLock;
 use urlencoded::UrlEncodedBody;
 
 pub struct UrlShortenerHandler {
+    short_url_prefix: String,
     shortened_urls: RwLock<HashMap<String, String>>,
 }
 
 impl UrlShortenerHandler {
-    pub fn new() -> Self {
-        UrlShortenerHandler { shortened_urls: RwLock::new(HashMap::new()) }
+    pub fn new(short_url_prefix: String) -> Self {
+        UrlShortenerHandler {
+            short_url_prefix: short_url_prefix,
+            shortened_urls: RwLock::new(HashMap::new()),
+        }
     }
 
     fn extract_url(req: &mut Request) -> Result<String, &'static str> {
@@ -52,7 +56,7 @@ impl UrlShortenerHandler {
                 let mut shortened_urls = self.shortened_urls.write().unwrap();
                 let url_key = Self::gen_unused_random_key(&shortened_urls);
 
-                let short_url = format!("http://localhost:3000/{}", url_key);
+                let short_url = format!("{}{}", self.short_url_prefix, url_key);
                 shortened_urls.insert(url_key, long_url);
                 Ok(Response::with((status::Created, Header(headers::Location(short_url)))))
             }
@@ -92,16 +96,16 @@ mod tests {
 
     #[test]
     fn short_url_not_found() {
-        let response = request::get("http://localhost:3000/hello",
-                                    Headers::new(),
-                                    &UrlShortenerHandler::new())
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+
+        let response = request::get("http://localhost:3000/hello", Headers::new(), &handler)
             .unwrap();
         assert_eq!(response.status.unwrap(), status::NotFound);
     }
 
     #[test]
     fn short_url_found() {
-        let handler = UrlShortenerHandler::new();
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
 
         let mut request_headers = Headers::new();
         request_headers.set(ContentType::form_url_encoded());
@@ -119,10 +123,9 @@ mod tests {
 
     #[test]
     fn post_wrong_contenttype() {
-        let response = request::post("http://localhost:3000",
-                                     Headers::new(),
-                                     "",
-                                     &UrlShortenerHandler::new())
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+
+        let response = request::post("http://localhost:3000", Headers::new(), "", &handler)
             .unwrap();
         assert_eq!(response.status.unwrap(), status::BadRequest);
         assert_eq!(response::extract_body_to_string(response),
@@ -131,7 +134,7 @@ mod tests {
 
     #[test]
     fn post_missing_url() {
-        let handler = UrlShortenerHandler::new();
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
 
         let mut request_headers = Headers::new();
         request_headers.set(ContentType::form_url_encoded());
@@ -144,7 +147,7 @@ mod tests {
 
     #[test]
     fn post_invalid_url() {
-        let handler = UrlShortenerHandler::new();
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
 
         let mut request_headers = Headers::new();
         request_headers.set(ContentType::form_url_encoded());

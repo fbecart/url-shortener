@@ -46,6 +46,10 @@ It indicates a redirection to the longer URL.
     Content-Length: 0
     Date: Tue, 16 Aug 2016 20:31:56 GMT
 
+The prefix of the short URLs can be defined with an environment variable. This will affect the `Location` header of in the response of successful POST requests.
+
+    export SHORT_URL_PREFIX=https://bit.ly/
+
 So far, short URLs are only stored in memory. It would be interesting to store them in a file or on a Redis instance instead.
 
 ## Why Rust?

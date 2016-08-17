@@ -10,12 +10,16 @@ mod handlers;
 
 use iron::prelude::*;
 
+use std::env;
+
 use self::handlers::UrlShortenerHandler;
 
 fn main() {
     println!("Starting URL Shortener on port 3000...");
 
-    let handler = UrlShortenerHandler::new();
+    let short_url_prefix = env::var("SHORT_URL_PREFIX")
+        .unwrap_or("http://localhost:3000/".to_string());
+    let handler = UrlShortenerHandler::new(short_url_prefix);
     match Iron::new(handler).http("localhost:3000") {
         Ok(_) => println!("Server started"),
         Err(e) => {
