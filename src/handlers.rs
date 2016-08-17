@@ -34,7 +34,7 @@ impl UrlShortenerHandler {
     fn gen_unused_random_key(shortened_urls: &HashMap<String, Url>) -> String {
         let mut url_key: Option<String> = None;
         while url_key.is_none() {
-            let random_key: String = rand::thread_rng().gen_ascii_chars().take(5).collect();
+            let random_key: String = rand::thread_rng().gen_ascii_chars().take(7).collect();
             url_key = if shortened_urls.contains_key(&random_key) {
                 None
             } else {
