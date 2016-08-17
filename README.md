@@ -46,7 +46,11 @@ If the short URL exists, the response will be a redirection to the longer URL.
     Content-Length: 0
     Date: Tue, 16 Aug 2016 20:31:56 GMT
 
-The prefix of the short URLs can be defined with an environment variable. This will affect the `Location` header of in the response of successful POST requests.
+The port of the server can be configured by environment variable (default value is `3000`).
+
+    export PORT=8080
+
+The prefix of the short URLs can be defined with an environment variable (default value is `http://localhost:3000/`). This will affect the `Location` header of in the response of successful POST requests.
 
     export SHORT_URL_PREFIX=https://bit.ly/
 

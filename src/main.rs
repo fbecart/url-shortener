@@ -15,12 +15,15 @@ use std::env;
 use self::handlers::UrlShortenerHandler;
 
 fn main() {
-    println!("Starting URL Shortener on port 3000...");
-
+    let port = env::var("PORT").unwrap_or("3000".to_string());
     let short_url_prefix = env::var("SHORT_URL_PREFIX")
-        .unwrap_or("http://localhost:3000/".to_string());
+        .unwrap_or(format!("http://localhost:{}/", port));
+
+    println!("Starting URL Shortener on port {}...", port);
+
+    let addr = format!("localhost:{}", port);
     let handler = UrlShortenerHandler::new(short_url_prefix);
-    match Iron::new(handler).http("localhost:3000") {
+    match Iron::new(handler).http(&addr[..]) {
         Ok(_) => println!("Server started"),
         Err(e) => {
             println!("Error: {}", e.to_string());
