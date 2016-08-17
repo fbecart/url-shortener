@@ -26,7 +26,7 @@ Finally, use Cargo to test, run or build the project locally.
 
 Once launched, the server will generate short URLs.
 
-    curl -i -X POST --data "url=https://www.helloclue.com/" https://localhost:3000
+    curl -i -X POST --data "url=https://www.helloclue.com/" http://localhost:3000
 
 The short URL will be returned as HTTP header `Location`.
 
