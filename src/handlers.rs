@@ -1,7 +1,7 @@
 use iron::headers;
 use iron::prelude::*;
 use iron::method::Method;
-use iron::modifiers::{Redirect, Header};
+use iron::modifiers::{RedirectRaw, Header};
 use iron::{Handler, Url, status};
 
 use rand;
@@ -13,7 +13,7 @@ use std::sync::RwLock;
 use urlencoded::UrlEncodedBody;
 
 pub struct UrlShortenerHandler {
-    shortened_urls: RwLock<HashMap<String, Url>>,
+    shortened_urls: RwLock<HashMap<String, String>>,
 }
 
 impl UrlShortenerHandler {
@@ -21,17 +21,19 @@ impl UrlShortenerHandler {
         UrlShortenerHandler { shortened_urls: RwLock::new(HashMap::new()) }
     }
 
-    fn extract_url(req: &mut Request) -> Result<Url, &'static str> {
+    fn extract_url(req: &mut Request) -> Result<String, &'static str> {
         req.get_ref::<UrlEncodedBody>()
             .map_err(|_| "URL encoded body missing")
             .and_then(|data| match data.get("url") {
                 Some(urls) => Ok(urls.first().unwrap()),
                 None => Err("Parameter 'url' missing from the URL encoded body"),
             })
-            .and_then(|url| Url::parse(url).map_err(|_| "Parameter 'url' is invalid"))
+            .and_then(|url| {
+                Url::parse(url).map(|_| url.to_owned()).map_err(|_| "Parameter 'url' is invalid")
+            })
     }
 
-    fn gen_unused_random_key(shortened_urls: &HashMap<String, Url>) -> String {
+    fn gen_unused_random_key(shortened_urls: &HashMap<String, String>) -> String {
         let mut url_key: Option<String> = None;
         while url_key.is_none() {
             let random_key: String = rand::thread_rng().gen_ascii_chars().take(7).collect();
@@ -61,7 +63,7 @@ impl UrlShortenerHandler {
     fn handle_get_request(&self, req: &mut Request) -> IronResult<Response> {
         let request_path = &req.url.path().join("/");
         match self.shortened_urls.read().unwrap().get(request_path) {
-            Some(url) => Ok(Response::with((status::Found, Redirect(url.clone())))),
+            Some(url) => Ok(Response::with((status::Found, RedirectRaw(url.to_owned())))),
             None => Ok(Response::with(status::NotFound)),
         }
     }
@@ -105,14 +107,14 @@ mod tests {
         request_headers.set(ContentType::form_url_encoded());
         let response = request::post("http://localhost:3000",
                                      request_headers,
-                                     "url=https://www.helloclue.com/",
+                                     "url=https://www.helloclue.com",
                                      &handler)
             .unwrap();
         let short_url = response.headers.get::<Location>().unwrap();
         let response = request::get(short_url, Headers::new(), &handler).unwrap();
         assert_eq!(response.status.unwrap(), status::Found);
         assert_eq!(response.headers.get::<Location>().unwrap().0,
-                   "https://www.helloclue.com/");
+                   "https://www.helloclue.com");
     }
 
     #[test]
@@ -124,6 +126,35 @@ mod tests {
             .unwrap();
         assert_eq!(response.status.unwrap(), status::BadRequest);
         assert_eq!(response::extract_body_to_string(response),
-                   "URL encoded body missing")
+                   "URL encoded body missing");
+    }
+
+    #[test]
+    fn post_missing_url() {
+        let handler = UrlShortenerHandler::new();
+
+        let mut request_headers = Headers::new();
+        request_headers.set(ContentType::form_url_encoded());
+        let response = request::post("http://localhost:3000", request_headers, "a=b", &handler)
+            .unwrap();
+        assert_eq!(response.status.unwrap(), status::BadRequest);
+        assert_eq!(response::extract_body_to_string(response),
+                   "Parameter 'url' missing from the URL encoded body");
+    }
+
+    #[test]
+    fn post_invalid_url() {
+        let handler = UrlShortenerHandler::new();
+
+        let mut request_headers = Headers::new();
+        request_headers.set(ContentType::form_url_encoded());
+        let response = request::post("http://localhost:3000",
+                                     request_headers,
+                                     "url=invalid/url",
+                                     &handler)
+            .unwrap();
+        assert_eq!(response.status.unwrap(), status::BadRequest);
+        assert_eq!(response::extract_body_to_string(response),
+                   "Parameter 'url' is invalid");
     }
 }
