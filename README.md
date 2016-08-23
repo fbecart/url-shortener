@@ -1,5 +1,9 @@
 This is a simple URL shortener developed in the Rust programming language.
 
+## Code status
+
+[![Build Status](https://travis-ci.org/fbecart/url-shortener.svg?branch=master)](https://travis-ci.org/fbecart/url-shortener)
+
 ## Setup and usage
 
 First, you'll want to install the [Rust toolchain](https://www.rustup.rs/).
