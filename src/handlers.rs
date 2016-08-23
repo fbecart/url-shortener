@@ -4,24 +4,22 @@ use iron::method::Method;
 use iron::modifiers::{RedirectRaw, Header};
 use iron::{Handler, Url, status};
 
-use rand;
-use rand::Rng;
-
-use std::collections::HashMap;
 use std::sync::RwLock;
+
+use storage::InMemoryKeyValueStore;
 
 use urlencoded::UrlEncodedBody;
 
 pub struct UrlShortenerHandler {
     short_url_prefix: String,
-    url_by_key: RwLock<HashMap<String, String>>,
+    state: RwLock<InMemoryKeyValueStore>,
 }
 
 impl UrlShortenerHandler {
     pub fn new(short_url_prefix: String) -> Self {
         UrlShortenerHandler {
             short_url_prefix: short_url_prefix,
-            url_by_key: RwLock::new(HashMap::new()),
+            state: RwLock::new(InMemoryKeyValueStore::new()),
         }
     }
 
@@ -37,27 +35,11 @@ impl UrlShortenerHandler {
             })
     }
 
-    fn gen_unused_random_key(url_by_key: &HashMap<String, String>) -> String {
-        let mut url_key: Option<String> = None;
-        while url_key.is_none() {
-            let random_key: String = rand::thread_rng().gen_ascii_chars().take(7).collect();
-            url_key = if url_by_key.contains_key(&random_key) {
-                None
-            } else {
-                Some(random_key)
-            }
-        }
-        url_key.unwrap()
-    }
-
     fn handle_post_request(&self, req: &mut Request) -> IronResult<Response> {
         match Self::extract_url(req) {
-            Ok(long_url) => {
-                let mut url_by_key = self.url_by_key.write().unwrap();
-                let url_key = Self::gen_unused_random_key(&url_by_key);
-
+            Ok(url) => {
+                let url_key = self.state.write().unwrap().insert(url);
                 let short_url = format!("{}{}", self.short_url_prefix, url_key);
-                url_by_key.insert(url_key, long_url);
                 Ok(Response::with((status::Created, Header(headers::Location(short_url)))))
             }
             Err(e) => Ok(Response::with((status::BadRequest, e))),
@@ -66,7 +48,7 @@ impl UrlShortenerHandler {
 
     fn handle_get_request(&self, req: &mut Request) -> IronResult<Response> {
         let request_path = &req.url.path().join("/");
-        match self.url_by_key.read().unwrap().get(request_path) {
+        match self.state.read().unwrap().get(request_path) {
             Some(url) => Ok(Response::with((status::Found, RedirectRaw(url.to_owned())))),
             None => Ok(Response::with(status::NotFound)),
         }

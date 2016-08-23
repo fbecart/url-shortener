@@ -7,6 +7,7 @@ extern crate urlencoded;
 extern crate iron_test;
 
 mod handlers;
+mod storage;
 
 use iron::prelude::*;
 
