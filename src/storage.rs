@@ -3,6 +3,11 @@ use rand::Rng;
 
 use std::collections::HashMap;
 
+pub trait KeyValueStore: 'static + Send + Sync + Sized {
+    fn insert(&mut self, value: String) -> String;
+    fn get(&self, key: &str) -> Option<String>;
+}
+
 pub struct InMemoryKeyValueStore {
     hashmap: HashMap<String, String>,
 }
@@ -24,14 +29,16 @@ impl InMemoryKeyValueStore {
         }
         url_key.unwrap()
     }
+}
 
-    pub fn insert(&mut self, value: String) -> String {
+impl KeyValueStore for InMemoryKeyValueStore {
+    fn insert(&mut self, value: String) -> String {
         let key = Self::generate_unused_random_key(&self.hashmap);
         self.hashmap.insert(key.clone(), value);
         key
     }
 
-    pub fn get(&self, key: &str) -> Option<String> {
+    fn get(&self, key: &str) -> Option<String> {
         self.hashmap.get(key).map(|s| s.to_owned())
     }
 }

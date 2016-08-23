@@ -6,20 +6,20 @@ use iron::{Handler, Url, status};
 
 use std::sync::RwLock;
 
-use storage::InMemoryKeyValueStore;
+use storage::KeyValueStore;
 
 use urlencoded::UrlEncodedBody;
 
-pub struct UrlShortenerHandler {
+pub struct UrlShortenerHandler<A: KeyValueStore> {
     short_url_prefix: String,
-    state: RwLock<InMemoryKeyValueStore>,
+    state: RwLock<A>,
 }
 
-impl UrlShortenerHandler {
-    pub fn new(short_url_prefix: String) -> Self {
-        UrlShortenerHandler {
+impl<A: KeyValueStore> UrlShortenerHandler<A> {
+    pub fn new(short_url_prefix: String, state: A) -> Self {
+        UrlShortenerHandler::<A> {
             short_url_prefix: short_url_prefix,
-            state: RwLock::new(InMemoryKeyValueStore::new()),
+            state: RwLock::new(state),
         }
     }
 
@@ -55,7 +55,7 @@ impl UrlShortenerHandler {
     }
 }
 
-impl Handler for UrlShortenerHandler {
+impl<A: KeyValueStore> Handler for UrlShortenerHandler<A> {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
         match &req.method {
             &Method::Post => self.handle_post_request(req),
@@ -74,11 +74,14 @@ mod tests {
 
     use iron_test::{request, response};
 
+    use storage::InMemoryKeyValueStore;
+
     use super::UrlShortenerHandler;
 
     #[test]
     fn short_url_not_found() {
-        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string(),
+                                               InMemoryKeyValueStore::new());
 
         let response = request::get("http://localhost:3000/hello", Headers::new(), &handler)
             .unwrap();
@@ -87,7 +90,8 @@ mod tests {
 
     #[test]
     fn short_url_found() {
-        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string(),
+                                               InMemoryKeyValueStore::new());
 
         let mut request_headers = Headers::new();
         request_headers.set(ContentType::form_url_encoded());
@@ -105,7 +109,8 @@ mod tests {
 
     #[test]
     fn post_wrong_contenttype() {
-        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string(),
+                                               InMemoryKeyValueStore::new());
 
         let response = request::post("http://localhost:3000", Headers::new(), "", &handler)
             .unwrap();
@@ -116,7 +121,8 @@ mod tests {
 
     #[test]
     fn post_missing_url() {
-        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string(),
+                                               InMemoryKeyValueStore::new());
 
         let mut request_headers = Headers::new();
         request_headers.set(ContentType::form_url_encoded());
@@ -129,7 +135,8 @@ mod tests {
 
     #[test]
     fn post_invalid_url() {
-        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string());
+        let handler = UrlShortenerHandler::new("http://localhost:3000/".to_string(),
+                                               InMemoryKeyValueStore::new());
 
         let mut request_headers = Headers::new();
         request_headers.set(ContentType::form_url_encoded());
