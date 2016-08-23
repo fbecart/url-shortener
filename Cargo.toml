@@ -2,7 +2,11 @@
 name = "url-shortener"
 version = "0.1.0"
 authors = ["Florent Bécart <florent.becart@gmail.com>"]
+repository = "https://github.com/fbecart/url-shortener.git"
+homepage = "https://github.com/fbecart/url-shortener"
 license = "MIT"
+readme = "README.md"
+description = "A simple URL shortener developed in Rust"
 
 [dependencies]
 rand = "0.3"
