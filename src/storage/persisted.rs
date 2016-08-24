@@ -18,27 +18,33 @@ pub struct PersistedKeyValueStore {
 impl PersistedKeyValueStore {
     pub fn new(filename: String) -> Self {
         let file = OpenOptions::new().read(true).write(true).create(true).open(filename).unwrap();
-
-        let mut file_data: HashMap<String, String> = HashMap::new();
-        {
-            let buffered_reader = BufReader::new(&file);
-            for line in buffered_reader.lines() {
-                let line = line.unwrap();
-                match line.find(KEY_VALUE_SEPARATOR) {
-                    Some(separator_index) => {
-                        let key = line[0..separator_index].to_owned();
-                        let value = line[separator_index + 1..].to_owned();
-                        file_data.insert(key, value);
-                    }
-                    None => println!("Ignoring line because of invalid format: '{}'", line),
-                }
-            }
-        }
+        let file_data = PersistedKeyValueStore::extract_data(&file);
 
         PersistedKeyValueStore {
             base: InMemoryKeyValueStore::with_initial_data(file_data),
             file: file,
         }
+    }
+
+    fn extract_data(file: &File) -> HashMap<String, String> {
+        BufReader::new(file)
+            .lines()
+            .map(|l| l.unwrap())
+            .flat_map(|line| match line.find(KEY_VALUE_SEPARATOR) {
+                Some(separator_index) => {
+                    let key = line[0..separator_index].to_owned();
+                    let value = line[separator_index + 1..].to_owned();
+                    Some((key, value))
+                }
+                None => {
+                    println!("Ignoring line because of invalid format: '{}'", line);
+                    None
+                }
+            })
+            .fold(HashMap::new(), |mut acc, (key, value)| {
+                acc.insert(key, value);
+                acc
+            })
     }
 }
 
