@@ -58,7 +58,9 @@ The prefix of the short URLs can be defined with an environment variable (defaul
 
     export SHORT_URL_PREFIX=https://bit.ly/
 
-So far, short URLs are only stored in memory. It would be interesting to store them in a file or on a Redis instance instead.
+Short URLs are persisted on a simple text file. The location of this file can be configured by environment variable (default value is `short.urls`).
+
+    export DATA_FILE=/var/url-shortener/short.urls
 
 ## Why Rust?
 
