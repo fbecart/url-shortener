@@ -74,7 +74,7 @@ mod tests {
 
     use iron_test::{request, response};
 
-    use storage::InMemoryKeyValueStore;
+    use storage::in_memory::InMemoryKeyValueStore;
 
     use super::UrlShortenerHandler;
 

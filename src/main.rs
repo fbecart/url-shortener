@@ -14,7 +14,7 @@ use iron::prelude::*;
 use std::env;
 
 use self::handlers::UrlShortenerHandler;
-use self::storage::PersistedKeyValueStore;
+use self::storage::persisted::PersistedKeyValueStore;
 
 fn main() {
     let port = env::var("PORT").unwrap_or("3000".to_string());
